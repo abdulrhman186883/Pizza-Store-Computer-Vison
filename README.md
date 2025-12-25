@@ -1,5 +1,7 @@
 AI Pizza Hygiene Monitor
 This repository contains a real-time AI system designed to monitor food safety. It detects barehand contact in a kitchen environment while intelligently ignoring contact when tools or pizzas are being handled.
+
+
 🛠️ Installation & Setup
 
 1. Clone and Prepare the Folder

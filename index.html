@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Hygiene Monitor</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; text-align: center; }
+        .controls { background: #1e1e1e; padding: 20px; border-radius: 10px; margin-bottom: 20px; display: inline-block; border: 1px solid #333; }
+        select, input { padding: 10px; border-radius: 5px; background: #2a2a2a; color: white; border: 1px solid #444; margin: 5px; }
+        canvas { border: 2px solid #555; background: #000; cursor: crosshair; }
+        #stream { display: none; border: 4px solid #28a745; border-radius: 10px; max-width: 90%; }
+        button { padding: 10px 20px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; margin: 5px; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <h1>Pizza Hygiene Monitor</h1>
+    
+    <div id="setup-ui">
+        <div class="controls">
+            <h3>Step 1: Select Video Source</h3>
+            
+            <select id="sourceType" onchange="toggleInputMode()">
+                <option value="file">Local Video File</option>
+                <option value="camera">Live Camera (Index)</option>
+            </select>
+
+            <select id="videoSelect"></select>
+
+            <input type="number" id="cameraIndex" class="hidden" placeholder="Camera Index (e.g. 0)" value="0">
+
+            <button class="btn-primary" onclick="applySource()">Connect</button>
+        </div>
+
+        <div id="roi-container" style="display:none;">
+            <h3>Step 2: Draw Zone</h3>
+            <canvas id="canvas"></canvas><br>
+            <button onclick="resetROI()">Clear</button>
+            <button class="btn-success" onclick="submitROI()">Start</button>
+        </div>
+    </div>
+
+    <img id="stream" src="">
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const streamImg = document.getElementById('stream');
+        let points = [], baseImg = new Image();
+
+        // Initialize videos
+        window.onload = async () => {
+            try {
+                const res = await fetch('http://127.0.0.1:8000/list_videos');
+                const data = await res.json();
+                const select = document.getElementById('videoSelect');
+                data.videos.forEach(v => {
+                    let opt = document.createElement('option');
+                    opt.value = v; opt.textContent = v;
+                    select.appendChild(opt);
+                });
+            } catch (e) { console.error("Could not load video list", e); }
+        };
+
+        // Toggle between File and Camera inputs
+        function toggleInputMode() {
+            const type = document.getElementById('sourceType').value;
+            const videoSelect = document.getElementById('videoSelect');
+            const cameraInput = document.getElementById('cameraIndex');
+            
+            if (type === 'file') {
+                videoSelect.classList.remove('hidden');
+                cameraInput.classList.add('hidden');
+            } else {
+                videoSelect.classList.add('hidden');
+                cameraInput.classList.remove('hidden');
+            }
+        }
+
+        async function applySource() {
+            const type = document.getElementById('sourceType').value;
+            let sourceValue;
+
+            if (type === 'file') {
+                sourceValue = document.getElementById('videoSelect').value;
+            } else {
+                sourceValue = document.getElementById('cameraIndex').value;
+            }
+
+            // Update Backend Source
+            await fetch('http://127.0.0.1:8000/set_source', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ source: sourceValue })
+            });
+
+            // Fetch first frame for ROI drawing
+            const res = await fetch('http://127.0.0.1:8000/first_frame');
+            const blob = await res.blob();
+            baseImg.src = URL.createObjectURL(blob);
+            baseImg.onload = () => {
+                canvas.width = baseImg.width; 
+                canvas.height = baseImg.height;
+                document.getElementById('roi-container').style.display = 'block';
+                points = []; 
+                draw();
+            };
+        }
+
+        canvas.onclick = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            points.push({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+            draw();
+        };
+
+        function draw() {
+            ctx.drawImage(baseImg, 0, 0);
+            if (points.length === 0) return;
+            ctx.strokeStyle = '#00ff00'; 
+            ctx.lineWidth = 3; 
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            points.forEach(p => ctx.lineTo(p.x, p.y));
+            if (points.length > 2) ctx.closePath();
+            ctx.stroke();
+            // Draw point dots
+            ctx.fillStyle = "#00ff00";
+            points.forEach(p => ctx.fillRect(p.x-2, p.y-2, 4, 4));
+        }
+
+        function resetROI() { points = []; draw(); }
+
+        async function submitROI() {
+            if (points.length < 3) {
+                alert("Please draw at least 3 points for the zone.");
+                return;
+            }
+            await fetch('http://127.0.0.1:8000/set_roi', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(points)
+            });
+            document.getElementById('setup-ui').style.display = 'none';
+            streamImg.src = "http://127.0.0.1:8000/video_feed?t=" + Date.now();
+            streamImg.style.display = "inline-block";
+        }
+    </script>
+</body>
+</html>

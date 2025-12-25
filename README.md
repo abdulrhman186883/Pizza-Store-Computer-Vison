@@ -32,6 +32,7 @@ Click Connect.
 Draw the Zone: Use your mouse to click points on the live frame to create a polygon around the "Hygiene Zone."
 
 Click Start Monitoring.
+
 --------------------------------------------------
 System Architecture
 

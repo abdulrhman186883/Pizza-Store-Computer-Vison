@@ -54,16 +54,24 @@ The system is designed to distinguish between standard kitchen operations and ac
 
 ### 1. Bare Hand Detection (Warning)
 ![Bare Hand](Bare%20Hand.png)
+
+
 *When a bare hand enters the designated Hygiene Zone, the system starts a 1.5-second grace period timer, highlighted in yellow.*
 
 ### 2. Hygiene Violation (Flagged)
 ![Violation](Violation%20bare%20hand%20.png)
+
+
 *If a bare hand remains in the zone beyond the grace period without using a tool, a violation is recorded and the counter increases.*
 
 ### 3. Safe Operation: Handling Pizza
 ![Hands on Pizza](hands%20on%20pizza.png)
+
+
 *The AI recognizes when a hand is interacting directly with the pizza (processing/moving), suppressing the violation alert.*
 
 ### 4. Safe Operation: Using Tools
 ![With Spooner](with%20spooner.png)
+
+
 *When the system detects a collision between a hand and a tool (spoon, scoop, or spooner), it marks the action as SAFE.*

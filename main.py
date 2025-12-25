@@ -108,7 +108,7 @@ async def set_roi(points: List[Point]):
 
 # --- BACKGROUND AI WORKER ---
 def process_frames():
-    GRACE_PERIOD, COOLDOWN = 2.0, 2.0
+    GRACE_PERIOD, COOLDOWN = 1.5, 2.0
 
     while True:
         with state.lock:
